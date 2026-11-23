@@ -95,8 +95,11 @@ Telegram accepts a send can produce a duplicate with the same visible run
 number. Replies are plain text, capped in length, and retry at most four
 times. `/status` reports undelivered replies for that topic.
 
-Next milestone: verify this with a dedicated live bot, then design and test
-an isolated runner before enabling coding tools.
+The first live bot on the homeserver verified both Telegram delivery and
+OpenCode model replies. The next capability is editing and testing the
+Teleharness code in an isolated checkout, then opening a draft PR for human
+review. The runner must not have access to the host, cluster credentials, bot
+token, or a GitHub credential that can bypass protected `main`.
 
 ## Container deployment
 

@@ -60,7 +60,7 @@ jobs:
       - name: Record the immutable image reference
         env:
           IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
-        run: printf 'Deployment image:\n\n`ghcr.io/%s@%s`\n' "$GITHUB_REPOSITORY" "$IMAGE_DIGEST" >> "$GITHUB_STEP_SUMMARY"
+        run: printf 'Deployment image:\n\n    ghcr.io/%s@%s\n' "$GITHUB_REPOSITORY" "$IMAGE_DIGEST" >> "$GITHUB_STEP_SUMMARY"
       - name: Promote the current main image for Argo CD
         env:
           IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
