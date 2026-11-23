@@ -1,0 +1,30 @@
+{
+  "name": "teleharness",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "fmt": "oxfmt --check .",
+    "fmt:write": "oxfmt .",
+    "lint": "oxlint --deny-warnings .",
+    "start": "node src/main.ts",
+    "test": "vitest run",
+    "tsc": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "2.1.11",
+    "hono": "4.13.19",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "oxfmt": "0.79.0",
+    "oxlint": "1.94.0",
+    "typescript": "5.9.3",
+    "vitest": "5.1.1"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "pnpm@12.6.0"
+}

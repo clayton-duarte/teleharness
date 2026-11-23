@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: ${{ matrix.check }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - check: tests
+            script: test
+          - check: fmt
+            script: fmt
+          - check: lint
+            script: lint
+          - check: tsc
+            script: tsc
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - uses: pnpm/action-setup@v6.1.1
+        with:
+          cache: true
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run ${{ matrix.script }}
+
+  ci:
+    name: ci
+    runs-on: ubuntu-latest
+    needs: checks
+    if: ${{ always() }}
+    steps:
+      - name: Require all checks to pass
+        env:
+          CHECKS_RESULT: ${{ needs.checks.result }}
+        run: test "$CHECKS_RESULT" = success
