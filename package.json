@@ -8,10 +8,14 @@
     "fmt:write": "oxfmt .",
     "lint": "oxlint --deny-warnings .",
     "start": "node src/main.ts",
+    "telegram:pair": "node src/pair.ts",
     "test": "vitest run",
     "tsc": "tsc --noEmit"
   },
   "dependencies": {
+    "@earendil-works/chord": "1.6.0",
+    "@earendil-works/pi-ai": "1.6.0",
+    "@earendil-works/pi-durable": "1.6.0",
     "@hono/node-server": "2.1.11",
     "hono": "4.13.19",
     "zod": "4.6.7"

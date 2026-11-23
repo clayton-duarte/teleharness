@@ -1,0 +1,75 @@
+name: Container image
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  image-check:
+    name: Build and smoke-test image
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - run: docker build --platform linux/amd64 --tag teleharness:ci .
+      - name: Check production imports, health endpoints, and state permissions
+        run: |
+          docker run --rm --network none --entrypoint node teleharness:ci --input-type=module -e '
+            import { lstat } from "node:fs/promises";
+            import { createApp } from "./src/app.ts";
+            import "./src/agent.ts";
+            const state = await lstat(process.env.TELEHARNESS_STATE_DIR);
+            if (process.getuid() !== 1000 || state.uid !== 1000 || (state.mode & 0o777) !== 0o700) process.exit(1);
+            const app = createApp();
+            if ((await app.request("/healthz")).status !== 200) process.exit(1);
+            if ((await app.request("/readyz")).status !== 503) process.exit(1);
+          '
+
+  publish:
+    name: Publish image
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: teleharness-image-main
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish the reviewed revision
+        id: image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ghcr.io/${{ github.repository }}:sha-${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+      - name: Record the immutable image reference
+        env:
+          IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
+        run: printf 'Deployment image:\n\n    ghcr.io/%s@%s\n' "$GITHUB_REPOSITORY" "$IMAGE_DIGEST" >> "$GITHUB_STEP_SUMMARY"
+      - name: Promote the current main image for Argo CD
+        env:
+          IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
+        run: |
+          set -euo pipefail
+          read -r main_sha _ < <(git ls-remote --exit-code origin refs/heads/main)
+          if [ "$main_sha" != "$GITHUB_SHA" ]; then
+            echo 'A newer main revision exists; not moving the deployment tag.'
+            exit 0
+          fi
+          image="ghcr.io/$GITHUB_REPOSITORY"
+          docker buildx imagetools create --prefer-index=false --tag "$image:latest" "$image@$IMAGE_DIGEST"
