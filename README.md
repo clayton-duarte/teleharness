@@ -44,7 +44,8 @@ CI runs Vitest, Oxfmt, Oxlint, and TypeScript on pull requests and on `main`.
 4. Send `/start` (an alias for `/status`), a text prompt, or `/stop` in the
    authorized private chat.
    `GET http://127.0.0.1:3000/healthz` checks the local HTTP process, not
-   Telegram or model connectivity.
+   Telegram or model connectivity. `/readyz` indicates a recent successful
+   Telegram poll; a text prompt is still needed to verify the model.
 
 If you don't know your IDs, stop any poller for this token and pass only the
 bot token reference to the pairing command:
@@ -96,3 +97,15 @@ times. `/status` reports undelivered replies for that topic.
 
 Next milestone: verify this with a dedicated live bot, then design and test
 an isolated runner before enabling coding tools.
+
+## Container deployment
+
+The container runs as UID 1000. Mount persistent storage at `/state` and
+set `TELEHARNESS_STATE_DIR` to a writable private directory on that volume.
+Both probe endpoints bind to loopback and can be checked from inside the
+container. Run only one poller per bot token, including any old process
+running outside the cluster.
+
+The [image workflow](.github/workflows/image.yml) publishes `linux/amd64`
+images to `ghcr.io/clayton-duarte/teleharness` after a merge to `main`.
+Use the immutable digest from the workflow summary in deployment manifests.

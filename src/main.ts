@@ -13,7 +13,7 @@ async function serveBridge(bridge: ReturnType<typeof createBridge>, port: number
   const controller = new AbortController();
   const signal = controller.signal;
   const stop = () => controller.abort();
-  const server = serve({ fetch: createApp().fetch, hostname: "127.0.0.1", port });
+  const server = serve({ fetch: createApp(bridge.ready).fetch, hostname: "127.0.0.1", port });
   server.once("error", () => {
     console.error("Could not start the local health server.");
     process.exitCode = 1;

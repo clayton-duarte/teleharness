@@ -8,6 +8,7 @@ import {
 } from "./telegram.ts";
 
 const dayMs = 86_400_000;
+const pollFreshnessMs = 70_000;
 const maxActiveSessions = 3;
 
 export function createBridge(
@@ -20,14 +21,22 @@ export function createBridge(
   const agents = new Map<number, Agent>();
   let offset: number | undefined;
   let lastBatchAt = 0;
+  let lastSuccessfulPollAt: number | undefined;
 
   return {
+    ready() {
+      return lastSuccessfulPollAt !== undefined && now() - lastSuccessfulPollAt < pollFreshnessMs;
+    },
+
     async poll(signal: AbortSignal) {
       // Offset is not durable. On reopen Telegram can redeliver, and the inbox deduplicates.
       // Drop it well before Telegram can choose a random update ID after a week of inactivity.
       if (now() - lastBatchAt >= dayMs) offset = undefined;
       const updates = await api.getUpdates(offset, signal);
-      if (!updates.length) return;
+      if (!updates.length) {
+        lastSuccessfulPollAt = now();
+        return;
+      }
       const requests = updates.flatMap((update) => {
         const request = parseTelegramRequest(update, owner);
         return request === null ? [] : [request];
@@ -35,6 +44,7 @@ export function createBridge(
       state.receive(requests);
       offset = Math.max(...updates.map((update) => update.update_id)) + 1;
       lastBatchAt = now();
+      lastSuccessfulPollAt = lastBatchAt;
     },
 
     async work() {

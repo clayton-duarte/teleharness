@@ -66,6 +66,25 @@ function fixture() {
   return { open, bridge, getUpdates, sendMessage, agent, advance: (ms: number) => (now += ms) };
 }
 
+test("requires recent successful Telegram polling, even when there are no updates", async () => {
+  const f = fixture();
+  const state = f.open();
+  try {
+    const bridge = f.bridge(state);
+    expect(bridge.ready()).toBe(false);
+    f.getUpdates.mockResolvedValueOnce([]);
+    await bridge.poll(signal);
+    expect(bridge.ready()).toBe(true);
+    f.advance(70_000);
+    expect(bridge.ready()).toBe(false);
+    f.getUpdates.mockRejectedValueOnce(new TelegramApiError("Telegram unavailable", true));
+    await expect(bridge.poll(signal)).rejects.toThrow();
+    expect(bridge.ready()).toBe(false);
+  } finally {
+    state.close();
+  }
+});
+
 test("poll records authorized input before confirming it, then deduplicates redelivery after reopen", async () => {
   const f = fixture();
   f.getUpdates.mockResolvedValueOnce([
