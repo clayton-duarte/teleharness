@@ -106,6 +106,9 @@ Both probe endpoints bind to loopback and can be checked from inside the
 container. Run only one poller per bot token, including any old process
 running outside the cluster.
 
-The [image workflow](.github/workflows/image.yml) publishes `linux/amd64`
-images to `ghcr.io/clayton-duarte/teleharness` after a merge to `main`.
-Use the immutable digest from the workflow summary in deployment manifests.
+The [image workflow](.github/workflows/image.yml) publishes a `linux/amd64`
+image after a merge to `main`. It tags each published revision by commit SHA
+and advances `ghcr.io/clayton-duarte/teleharness:latest` only for the current
+`main` tip. The homeserver's Argo CD Image Updater can track that tag and
+write back the immutable digest to Git. The workflow summary also records
+the digest for verification or rollback.

@@ -33,6 +33,9 @@ jobs:
     name: Publish image
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    concurrency:
+      group: teleharness-image-main
+      cancel-in-progress: false
     permissions:
       contents: read
       packages: write
@@ -58,3 +61,15 @@ jobs:
         env:
           IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
         run: printf 'Deployment image:\n\n`ghcr.io/%s@%s`\n' "$GITHUB_REPOSITORY" "$IMAGE_DIGEST" >> "$GITHUB_STEP_SUMMARY"
+      - name: Promote the current main image for Argo CD
+        env:
+          IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
+        run: |
+          set -euo pipefail
+          read -r main_sha _ < <(git ls-remote --exit-code origin refs/heads/main)
+          if [ "$main_sha" != "$GITHUB_SHA" ]; then
+            echo 'A newer main revision exists; not moving the deployment tag.'
+            exit 0
+          fi
+          image="ghcr.io/$GITHUB_REPOSITORY"
+          docker buildx imagetools create --prefer-index=false --tag "$image:latest" "$image@$IMAGE_DIGEST"
